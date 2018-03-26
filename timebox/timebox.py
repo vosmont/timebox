@@ -9,6 +9,7 @@ from os.path import isfile, join
 from PIL import Image
 from binascii import unhexlify
 from math import modf
+from datetime import datetime
 
 class Timebox:
     debug=False
@@ -77,13 +78,20 @@ def clock(ctx, color, ampm):
         ctx.obj['dev'].send(set_time_color(c[0],c[1],c[2],0xff,not ampm))
     else:
         ctx.obj['dev'].send(switch_view("clock"))
-       
-        
+
+@cli.command(short_help='set time')
+@click.pass_context
+    dt = datetime.now()
+    head = [0x0A,0x00,0x18,dt.year%100,int(dt.year/100),dt.month,dt.day,dt.hour,dt.minute,dt.second]
+    s=sum(head)
+    ck1, ck2 = checksum(s)
+    ctx.obj['dev'].send([0x01]+mask(head)+mask([ck1,ck2])+[0x02])
+
 @cli.command(short_help='display temperature, set color')
 @click.option('--color', nargs=1)
-@click.option('--f', is_flag=True, help="12 format am/pm")
+@click.option('--f', is_flag=True, help="farhenheit format")
 @click.pass_context
-def temp(ctx, color, f):    
+def temp(ctx, color, f):
     if(color):
         c = color_convert(Color(color).get_rgb())
         ctx.obj['dev'].send(set_temp_color(c[0],c[1],c[2],0xff,f))
